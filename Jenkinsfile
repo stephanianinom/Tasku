@@ -254,24 +254,23 @@ pipeline {
                 echo "Pipeline falló"
                 echo "Revisando logs de los contenedores..."
                 if (isUnix()) {
-                        sh '''
-                            echo "=== Logs Backend ==="
-                            docker logs --tail 50 tasku-backend || true
-                            echo "=== Logs Frontend ==="
-                            docker logs --tail 50 tasku-frontend || true
-                            echo "=== Logs PostgreSQL ==="
-                            docker logs --tail 50 tasku-postgresql || true
-                        '''
-                    } else {
-                        bat '''
-                            echo === Logs Backend ===
-                            docker logs --tail 50 tasku-backend
-                            echo === Logs Frontend ===
-                            docker logs --tail 50 tasku-frontend
-                            echo === Logs PostgreSQL ===
-                            docker logs --tail 50 tasku-postgresql
-                        '''
-                    }
+                    sh '''
+                        echo "=== Logs Backend ==="
+                        docker logs --tail 50 tasku-backend || true
+                        echo "=== Logs Frontend ==="
+                        docker logs --tail 50 tasku-frontend || true
+                        echo "=== Logs PostgreSQL ==="
+                        docker logs --tail 50 tasku-postgresql || true
+                    '''
+                } else {
+                    bat '''
+                        echo === Logs Backend ===
+                        docker logs --tail 50 tasku-backend
+                        echo === Logs Frontend ===
+                        docker logs --tail 50 tasku-frontend
+                        echo === Logs PostgreSQL ===
+                        docker logs --tail 50 tasku-postgresql
+                    '''
                 }
             }
         }
@@ -280,10 +279,9 @@ pipeline {
             script {
                 echo "Limpiando workspace..."
                 if (isUnix()) {
-                        sh 'docker image prune -f || true'
-                    } else {
-                        bat 'docker image prune -f'
-                    }
+                    sh 'docker image prune -f || true'
+                } else {
+                    bat 'docker image prune -f'
                 }
             }
         }
