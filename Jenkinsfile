@@ -204,6 +204,10 @@ pipeline {
                             """
                         }
                     }
+                    echo "Pruebas unitarias y análisis de SonarQube completados"
+                }
+            }
+        }
         
         stage('Build Imágenes Docker') {
             parallel {
