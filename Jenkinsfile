@@ -134,8 +134,11 @@ pipeline {
                         env.SONARQUBE_URL = credentials('sonarqube-url')
                         env.SONARQUBE_TOKEN = credentials('sonarqube-token')
                         echo "Credenciales de SonarQube configuradas"
+                        echo "URL: ${env.SONARQUBE_URL}"
+                        echo "Token configurado: ${env.SONARQUBE_TOKEN ? 'Sí' : 'No'}"
                     } catch (Exception e) {
                         echo "Credenciales de SonarQube no encontradas - saltando análisis de código"
+                        echo "Error: ${e.getMessage()}"
                         env.SONARQUBE_URL = 'http://localhost:9000'
                         env.SONARQUBE_TOKEN = ''
                     }
@@ -165,18 +168,31 @@ pipeline {
                                     echo Error al ejecutar pruebas unitarias
                                     exit /b 1
                                 )
-                                if not "%SONARQUBE_TOKEN%"=="" (
-                                    echo Ejecutando análisis de SonarQube...
-                                    mvn sonar:sonar ^
-                                        -Dsonar.projectKey=tasku-backend ^
-                                        -Dsonar.host.url=%SONARQUBE_URL% ^
-                                        -Dsonar.login=%SONARQUBE_TOKEN% ^
-                                        -Dsonar.sources=src/main/java ^
-                                        -Dsonar.tests=src/test/java ^
-                                        -Dsonar.java.binaries=target/classes ^
-                                        -Dsonar.junit.reportPaths=target/surefire-reports
+                                echo Verificando configuración de SonarQube...
+                                echo SONARQUBE_URL=%SONARQUBE_URL%
+                                echo SONARQUBE_TOKEN length=%SONARQUBE_TOKEN:~0,1%
+                                if defined SONARQUBE_TOKEN (
+                                    if not "%SONARQUBE_TOKEN%"=="" (
+                                        echo Ejecutando análisis de SonarQube...
+                                        echo URL: %SONARQUBE_URL%
+                                        echo Token configurado: Sí
+                                        mvn sonar:sonar ^
+                                            -Dsonar.projectKey=tasku-backend ^
+                                            -Dsonar.host.url=%SONARQUBE_URL% ^
+                                            -Dsonar.login=%SONARQUBE_TOKEN% ^
+                                            -Dsonar.sources=src/main/java ^
+                                            -Dsonar.tests=src/test/java ^
+                                            -Dsonar.java.binaries=target/classes ^
+                                            -Dsonar.junit.reportPaths=target/surefire-reports
+                                        if errorlevel 1 (
+                                            echo Error al ejecutar análisis de SonarQube
+                                            exit /b 1
+                                        )
+                                    ) else (
+                                        echo SonarQube no configurado - Token vacío
+                                    )
                                 ) else (
-                                    echo SonarQube no configurado - saltando análisis de código
+                                    echo SonarQube no configurado - Token no definido
                                 )
                             '''
                         }
