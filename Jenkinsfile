@@ -141,22 +141,22 @@ pipeline {
                             // Ejecutar pruebas y análisis dentro del bloque withCredentials
                             dir("${env.BACKEND_DIR}") {
                                 if (isUnix()) {
-                                    sh """
+                                    sh '''
                                         mvn clean test
                                         if [ $? -ne 0 ]; then
                                             echo Error al ejecutar pruebas unitarias
                                             exit 1
                                         fi
                                         echo "Ejecutando análisis de SonarQube..."
-                                        mvn sonar:sonar \\
-                                            -Dsonar.projectKey=tasku-backend \\
-                                            -Dsonar.host.url=${SQ_URL} \\
-                                            -Dsonar.login=${SQ_TOKEN} \\
-                                            -Dsonar.sources=src/main/java \\
-                                            -Dsonar.tests=src/test/java \\
-                                            -Dsonar.java.binaries=target/classes \\
+                                        mvn sonar:sonar \
+                                            -Dsonar.projectKey=tasku-backend \
+                                            -Dsonar.host.url=''' + "${SQ_URL}" + ''' \
+                                            -Dsonar.login=''' + "${SQ_TOKEN}" + ''' \
+                                            -Dsonar.sources=src/main/java \
+                                            -Dsonar.tests=src/test/java \
+                                            -Dsonar.java.binaries=target/classes \
                                             -Dsonar.junit.reportPaths=target/surefire-reports
-                                    """
+                                    '''
                                 } else {
                                     bat """
                                         mvn clean test
