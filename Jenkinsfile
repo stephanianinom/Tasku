@@ -18,6 +18,10 @@ pipeline {
         
         // Docker Host para la conexión con Docker Desktop
         DOCKER_HOST = 'tcp://localhost:2375'
+        
+        // SonarQube - URL por defecto apunta al contenedor Docker
+        SONARQUBE_URL = credentials('sonarqube-url') ?: 'http://localhost:9000'
+        SONARQUBE_TOKEN = credentials('sonarqube-token') ?: ''
     }
     
     options {
@@ -118,6 +122,46 @@ pipeline {
                             '''
                         }
                     }
+            }
+        }
+        
+        stage('Pruebas Unitarias y SonarQube') {
+            steps {
+                script {
+                    echo "Ejecutando pruebas unitarias del backend..."
+                    dir("${env.BACKEND_DIR}") {
+                        if (isUnix()) {
+                            sh '''
+                                mvn clean test
+                                mvn sonar:sonar \
+                                    -Dsonar.projectKey=tasku-backend \
+                                    -Dsonar.host.url=${SONARQUBE_URL} \
+                                    -Dsonar.login=${SONARQUBE_TOKEN} \
+                                    -Dsonar.sources=src/main/java \
+                                    -Dsonar.tests=src/test/java \
+                                    -Dsonar.java.binaries=target/classes \
+                                    -Dsonar.junit.reportPaths=target/surefire-reports
+                            '''
+                        } else {
+                            bat '''
+                                mvn clean test
+                                if errorlevel 1 (
+                                    echo Error al ejecutar pruebas unitarias
+                                    exit /b 1
+                                )
+                                mvn sonar:sonar ^
+                                    -Dsonar.projectKey=tasku-backend ^
+                                    -Dsonar.host.url=%SONARQUBE_URL% ^
+                                    -Dsonar.login=%SONARQUBE_TOKEN% ^
+                                    -Dsonar.sources=src/main/java ^
+                                    -Dsonar.tests=src/test/java ^
+                                    -Dsonar.java.binaries=target/classes ^
+                                    -Dsonar.junit.reportPaths=target/surefire-reports
+                            '''
+                        }
+                    }
+                    echo "Pruebas unitarias y análisis de SonarQube completados"
+                }
             }
         }
         
