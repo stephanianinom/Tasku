@@ -129,17 +129,17 @@ pipeline {
             steps {
                 script {
                     echo "Ejecutando pruebas unitarias del backend..."
-                    
-                    // Intentar leer credenciales y ejecutar análisis
-                    try {
-                        withCredentials([string(credentialsId: 'sonarqube-url', variable: 'SQ_URL'), 
-                                         string(credentialsId: 'sonarqube-token', variable: 'SQ_TOKEN')]) {
-                            echo "Credenciales de SonarQube configuradas"
-                            echo "URL: ${SQ_URL}"
-                            echo "Token configurado: Sí (longitud: ${SQ_TOKEN.length()})"
-                            
-                            // Ejecutar pruebas y análisis dentro del bloque withCredentials
-                            dir("${env.BACKEND_DIR}") {
+                    dir("${env.BACKEND_DIR}") {
+                        def ejecutarSoloPruebas = {
+                            if (isUnix()) {
+                                sh 'mvn clean test'
+                            } else {
+                                bat 'mvn clean test'
+                            }
+                        }
+                        
+                        try {
+                            withSonarQubeEnv('sonarqube') {
                                 if (isUnix()) {
                                     sh '''
                                         mvn clean test
@@ -150,27 +150,25 @@ pipeline {
                                         echo "Ejecutando análisis de SonarQube..."
                                         mvn sonar:sonar \
                                             -Dsonar.projectKey=tasku-backend \
-                                            -Dsonar.host.url=''' + "${SQ_URL}" + ''' \
-                                            -Dsonar.login=''' + "${SQ_TOKEN}" + ''' \
+                                            -Dsonar.host.url=$SONAR_HOST_URL \
+                                            -Dsonar.login=$SONAR_AUTH_TOKEN \
                                             -Dsonar.sources=src/main/java \
                                             -Dsonar.tests=src/test/java \
                                             -Dsonar.java.binaries=target/classes \
                                             -Dsonar.junit.reportPaths=target/surefire-reports
                                     '''
                                 } else {
-                                    bat """
+                                    bat '''
                                         mvn clean test
                                         if errorlevel 1 (
                                             echo Error al ejecutar pruebas unitarias
                                             exit /b 1
                                         )
                                         echo Ejecutando análisis de SonarQube...
-                                        echo URL: ${SQ_URL}
-                                        echo Token configurado: Sí
                                         mvn sonar:sonar ^
                                             -Dsonar.projectKey=tasku-backend ^
-                                            -Dsonar.host.url=${SQ_URL} ^
-                                            -Dsonar.login=${SQ_TOKEN} ^
+                                            -Dsonar.host.url=%SONAR_HOST_URL% ^
+                                            -Dsonar.login=%SONAR_AUTH_TOKEN% ^
                                             -Dsonar.sources=src/main/java ^
                                             -Dsonar.tests=src/test/java ^
                                             -Dsonar.java.binaries=target/classes ^
@@ -179,21 +177,13 @@ pipeline {
                                             echo Error al ejecutar análisis de SonarQube
                                             exit /b 1
                                         )
-                                    """
+                                    '''
                                 }
                             }
-                        }
-                    } catch (Exception e) {
-                        echo "Credenciales de SonarQube no encontradas - ejecutando solo pruebas unitarias"
-                        echo "Error: ${e.getMessage()}"
-                        
-                        // Ejecutar solo pruebas sin SonarQube
-                        dir("${env.BACKEND_DIR}") {
-                            if (isUnix()) {
-                                sh 'mvn clean test'
-                            } else {
-                                bat 'mvn clean test'
-                            }
+                        } catch (Exception e) {
+                            echo "SonarQube no configurado o inaccesible - ejecutando solo pruebas unitarias"
+                            echo "Detalle: ${e.getMessage()}"
+                            ejecutarSoloPruebas.call()
                         }
                     }
                     echo "Pruebas unitarias y análisis de SonarQube completados"
